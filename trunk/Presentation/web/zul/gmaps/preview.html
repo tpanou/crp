@@ -1,0 +1,159 @@
+<script type="text/Javascript">
+    <![CDATA[
+    var map;
+    var mOptions;
+    var infowindow;
+    var departureInput;
+    var arrivalInput;
+    var stopInput;
+    var departureAutocomplete;
+    var arrivalAutocomplete;
+    var stopAutocomplete;
+    var departureMarker;
+    var arrivalMarker;
+    var stopMarker;
+    var autocompleteOptions = {
+        componentRestrictions: {country: 'gr'}
+    };
+    var directionsDisplay;
+    var directionsService;
+    var routes = [];
+    var markers = [];
+    var directionDisplays = [];
+    var coords = '-1';
+    var geocoder;
+    var popularPlaces;
+    var selectedPopularPlace;
+
+
+    // load the google api loader
+    if (typeof(google) == 'undefined' || !google.load) {
+        jq.getScript('https://www.google.com/jsapi', function () {
+            loadMaps();
+        });
+    }
+    else {
+        // otherwise just load maps
+        loadMaps();
+    }
+
+    // load the google maps api
+    function loadMaps() {
+        google.load("maps", "3", {
+            callback: initialize,
+            language: 'el',
+            other_params: 'sensor=false&libraries=drawing,places'
+        });
+    }
+
+    function initialize() {
+
+        mOptions = {
+            center: new google.maps.LatLng(38.0037082, 23.6776768),
+            zoom: 16,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+
+        map = new google.maps.Map(document.getElementById("map-canvas"), mOptions);
+        directionsService = new google.maps.DirectionsService;
+
+        geocoder = new google.maps.Geocoder();
+
+        infowindow = new google.maps.InfoWindow();
+        departureMarker = new google.maps.Marker({
+            map: map
+        });
+        arrivalMarker = new google.maps.Marker({
+            map: map
+        });
+        stopMarker = new google.maps.Marker({
+            map: map
+        });
+
+        var directions = coords.split("*");
+
+        var departure, arrival, type;
+        for (var i = 0; i < directions.length; i++) {
+//			alert(directions[i]);
+            var path = directions[i].split("|");
+
+            var wayps = [];
+            for (var j = 0; j < path.length; j++) {
+                var pathCoords = path[j];
+//				alert(path[j]);
+                if (endsWith(pathCoords, 'D')) {
+                    type = 1;
+                } else if (endsWith(pathCoords, 'A')) {
+                    type = 2;
+                } else if (endsWith(pathCoords, 'W')) {
+                    type = 3;
+                }
+
+                pathCoords = pathCoords.replace('A', '');
+                pathCoords = pathCoords.replace('D', '');
+                pathCoords = pathCoords.replace('W', '');
+                pathCoords = pathCoords.replace('(', '');
+                pathCoords = pathCoords.replace(')', '');
+
+//				alert(pathCoords);
+
+
+                switch (type) {
+                    case 1:
+                        departure = pathCoords;
+                        break;
+                    case 2:
+                        arrival = pathCoords;
+                        break;
+                    case 3:
+                        pathCoords = pathCoords.replace(' ', '');
+                        var c = pathCoords.split(",");
+                        wayps.push({
+                            location: new google.maps.LatLng(c[0], c[1]),
+                            stopover: false
+                        });
+                        break;
+                }
+
+            }
+
+            directionsService.route({ 'origin': departure, 'destination': arrival, 'waypoints': wayps, 'travelMode': google.maps.DirectionsTravelMode.DRIVING}, function (response, status) {
+//				alert(status);
+                if (status == google.maps.DirectionsStatus.OK) {
+                    renderDirections(response, false);
+                }
+            });
+        }
+
+
+    }
+
+
+    function renderDirections(result, isDragable) {
+        var directionDisplay = new google.maps.DirectionsRenderer({
+            draggable: isDragable,
+            suppressMarkers: false,
+            markerOptions: {
+                icon: {
+                    url: '../../img/car.png'
+                },
+                draggable: false
+            }
+        });
+        directionDisplay.setMap(map);
+        directionDisplay.setDirections(result);
+
+        directionDisplays.push(directionDisplay);
+    }
+
+
+    function endsWith(str, suffix) {
+        return str.indexOf(suffix, str.length - suffix.length) !== -1;
+    }
+
+    function doPreview(routes) {
+        coords = routes;
+    }
+
+    ]]>
+</script>
